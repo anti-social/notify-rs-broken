@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.71"
 notify = "6.0.1"
+walkdir = "2.3.3"

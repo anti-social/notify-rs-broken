@@ -1,6 +1,7 @@
 use std::time::Duration;
 use std::fs::create_dir;
 use std::path::Path;
+use std::sync::mpsc::sync_channel;
 use std::thread;
 
 use notify::{Watcher, RecursiveMode};
@@ -11,9 +12,26 @@ fn main() -> anyhow::Result<()> {
         create_dir(watch_path)?;
     }
 
-    let mut watcher = notify::recommended_watcher(|res| {
+    let (tx, rx) = sync_channel(16);
+
+    thread::spawn(move || {
+        loop {
+            match rx.recv() {
+                Ok(event) => println!("event: {:?}", event),
+                Err(e) => break,
+            }
+        }
+        println!("Channel was closed");
+    });
+
+    let mut watcher = notify::recommended_watcher(move |res| {
         match res {
-           Ok(event) => println!("event: {:?}", event),
+           Ok(event) => {
+               match tx.send(event) {
+                   Ok(()) => {}
+                   Err(e) => println!("No receivers")
+               }
+           },
            Err(e) => println!("watch error: {:?}", e),
         }
     })?;
